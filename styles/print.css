@@ -1,0 +1,266 @@
+/* Print Styles */
+
+/* MOVED OUTSIDE @media print - Page counter needs to be initialized globally */
+body {
+  counter-reset: page;
+}
+
+@media print {
+  /* Hide elements that shouldn't print */
+  .app-header,
+  .dropdown-menu,
+  .install-button,
+  .menu-btn,
+  .btn,
+  .btn-action,
+  #guideModal,
+  #aboutModal,
+  #newLocationModal,
+  #refreshWarningModal,
+  #csvImportModal,
+  .modal {
+    display: none !important;
+  }
+
+  /* Reset body for print */
+  body {
+    background: white !important;
+    padding: 5mm 5mm !important;
+    color: black !important;
+    min-height: auto !important;
+  }
+
+  /* Container styling for print */
+  .container {
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Print header */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
+  }
+
+  .print-header h1 {
+    color: #000 !important;
+    font-size: 20pt;
+    margin-bottom: 8px;
+    text-shadow: none !important;
+    font-weight: bold;
+  }
+
+  .print-location {
+    font-size: 12pt;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 4px;
+  }
+
+  .print-date {
+    font-size: 10pt;
+    color: #666;
+    margin-bottom: 15px;
+  }
+
+  /* Summary table */
+  .print-summary {
+    display: block !important;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #f9f9f9;
+    page-break-inside: avoid;
+  }
+
+  .print-summary h3 {
+    color: #000 !important;
+    font-size: 12pt;
+    margin: 0 0 10px 0;
+    font-weight: bold;
+  }
+
+  .print-summary table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+  }
+
+  .print-summary th,
+  .print-summary td {
+    padding: 5px 8px;
+    text-align: left;
+    border: 1px solid #333;
+    font-size: 9pt;
+  }
+
+  .print-summary th {
+    background: #e0e0e0;
+    font-weight: bold;
+    color: #000 !important;
+  }
+
+  .print-summary td {
+    background: white;
+    color: #000 !important;
+  }
+
+  /* Card styling for print */
+  .card {
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-inside: avoid;
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+  }
+
+  .card h2 {
+    display: none !important;
+  }
+
+  /* Hide input sections for print */
+  .card:not(:has(#trees)) {
+    display: none !important;
+  }
+
+  /* Hide location header in results */
+  #locationHeader {
+    display: none !important;
+  }
+
+  /* Hide individual tree cards */
+  .tree-card {
+    display: none !important;
+  }
+
+  /* Results container - will hold our table */
+  #trees {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Print table for results */
+  .print-table {
+    display: table !important;
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15mm; /* FIXED: Added space for footer */
+    page-break-inside: auto;
+  }
+
+  .print-table thead {
+    display: table-header-group;
+  }
+
+  .print-table tbody {
+    display: table-row-group;
+  }
+
+  .print-table th {
+    background: #333 !important;
+    color: #000 !important; /* FIXED: Changed from #000 to white for better contrast */
+    font-weight: bold;
+    padding: 8px 6px;
+    text-align: center;
+    border: 1px solid #000;
+    font-size: 9pt;
+  }
+
+  .print-table td {
+    padding: 6px 6px;
+    border: 1px solid #333;
+    font-size: 9pt;
+    color: #000 !important;
+    text-align: left;
+  }
+
+  .print-table td:first-child {
+    text-align: center;
+    font-weight: bold;
+  }
+
+  .print-table tr {
+    page-break-inside: avoid;
+  }
+
+  .print-table tbody tr:nth-child(even) {
+    background: #f9f9f9 !important;
+  }
+
+  .print-table tbody tr:nth-child(odd) {
+    background: white !important;
+  }
+
+  /* FIXED: Print footer - removed duplicate and conflicting definitions */
+  .print-footer {
+    display: block !important; /* FIXED: Changed from none to block */
+    position: fixed;
+    bottom: 5mm; /* FIXED: Adjusted to work with 1cm margin */
+    left: 10mm;
+    right: 10mm;
+    text-align: left;
+    font-size: 9pt;
+    color: #333 !important;
+    border-top: 1px solid #999;
+    padding-top: 5px;
+  }
+
+  .print-footer p {
+    margin: 0;
+    color: #333 !important;
+    display: block; /* FIXED: Removed flex to simplify layout */
+  }
+
+  .print-footer strong {
+    color: #000 !important;
+  }
+
+  /* FIXED: Page number positioned at bottom right */
+  .print-footer::after {
+    content: "Page " counter(page);
+    position: absolute;
+    right: 0;
+    bottom: 5px;
+    font-weight: bold;
+    color: #000 !important;
+  }
+
+  /* FIXED: Page settings - 1cm margins as requested */
+  @page {
+    margin: 10mm; /* FIXED: Changed from 15mm to 10mm (1cm) */
+    size: A4 landscape;
+  }
+
+  /* Ensure no background colors or gradients */
+  * {
+    background-image: none !important;
+  }
+
+  /* Print-specific utilities */
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  .no-page-break {
+    page-break-inside: avoid;
+  }
+
+  /* Optimize font rendering for print */
+  body {
+    font-family: "Times New Roman", Times, serif;
+    line-height: 1.3;
+  }
+
+  /* Remove any transitions or animations */
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forest Inventory</title>
+  <meta name="description" content="Forest inventory data collection compatible with TIAMA/SIGIF2">
+  <meta name="theme-color" content="#2c5364">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forest Inventory">
+  <!-- Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <!-- Icons -->
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512x512.png">
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/responsive.css">
+  <link rel="stylesheet" href="styles/print.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header with Menu -->
+    <div class="app-header">
+      <h1>🌲 Forest Inventory</h1>
+      <button class="menu-btn" onclick="toggleMenu()">⋮</button>
+    </div>
+
+    <!-- Dropdown Menu -->
+    <div id="dropdownMenu" class="dropdown-menu">
+      <button onclick="exportCSV()">📥 Export to CSV</button>
+      <button onclick="openCSVFile()">📂 Open CSV File</button>
+      <button onclick="showNewLocationModal()">🆕 New Inventory</button>
+      <button onclick="showUserGuide()">📖 User Guide</button>
+      <button onclick="showAboutDeveloper()">👨‍💻 About Developer</button>
+      <button onclick="printResults()">🖨️ Print Results</button>
+    </div>
+
+    <!-- Hidden file input for CSV -->
+    <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+
+    <!-- Tree Data Entry Form -->
+    <div class="card">
+      <h2>📋 Tree Data Entry</h2>
+      
+      <div class="form-grid">
+        <div class="input-group">
+          <label for="area" class="required">Exploitation Area</label>
+          <input type="text" id="area" placeholder="Enter exploitation area">
+        </div>
+        <div class="input-group">
+          <label for="plot" class="required">Plot Number</label>
+          <input type="text" id="plot" placeholder="Enter plot number">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="input-group">
+          <label for="tradeName" class="required">Trade Name</label>
+          <select id="tradeName" onchange="updateSpecies()">
+            <option value="">Select trade name...</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="code">Species Code</label>
+          <input type="text" id="code" readonly style="background: #f5f5f5;">
+        </div>
+        <div class="input-group">
+          <label for="minDiam">Min Diameter (cm)</label>
+          <input type="number" id="minDiam" readonly style="background: #f5f5f5;">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="input-group">
+          <label for="dbh" class="required">DBH (cm)</label>
+          <input type="number" id="dbh" step="0.1" placeholder="Enter DBH" oninput="checkDiameter()">
+        </div>
+        <div class="input-group">
+          <label for="height" class="required">Bole Height (m)</label>
+          <input type="number" id="height" step="0.1" placeholder="Enter height">
+        </div>
+        <div class="input-group">
+          <label for="quality" class="required">Quality</label>
+          <select id="quality" onchange="updateQuality()">
+            <option value="">Select quality...</option>
+            <option value="1">1 - Perfect</option>
+            <option value="2">2 - Slight Defect</option>
+            <option value="3">3 - Unexploitable</option>
+            <option value="4">4 - Abandoned/Dead</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="input-group">
+          <label for="eastingX" class="required">Easting (X)</label>
+          <input type="number" id="eastingX" placeholder="e.g., 425150">
+        </div>
+        <div class="input-group">
+          <label for="northingY" class="required">Northing (Y)</label>
+          <input type="number" id="northingY" placeholder="e.g., 425150">
+        </div>
+        <div class="input-group">
+          <label for="volMethod">Volume Method</label>
+          <select id="volMethod">
+            <option value="form">Form Factor</option>
+            <option value="conic">Conic Formula</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="obs">Observations</label>
+        <textarea id="obs" rows="2" placeholder="e.g., Semencier, Tige d'Avenir"></textarea>
+      </div>
+
+      <div id="warning" class="alert alert-warning hidden"></div>
+      
+      <div id="volDisplay" class="alert alert-info hidden">
+        <strong>Calculated Volume:</strong> <span id="volValue">0.00</span> m³
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-primary" onclick="calcVolume()" id="calcBtn">🧮 Calculate Volume</button>
+        <button class="btn btn-success" onclick="saveTree()">💾 Save Tree</button>
+        <button class="btn btn-secondary" onclick="clearForm()">🔄 Clear Form</button>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="card">
+      <!-- Print Header (hidden on screen, visible on print) -->
+      <div class="print-header" style="display: none;">
+        <h1>🌲 Forest Inventory Report</h1>
+        <div class="print-location" id="printLocation"></div>
+        <div class="print-date" id="printDate"></div>
+      </div>
+
+      <!-- Print Summary (hidden on screen, visible on print) -->
+      <div class="print-summary" style="display: none;">
+        <h3>Summary Statistics</h3>
+        <table>
+          <tr>
+            <th>Total Trees Recorded</th>
+            <td id="printTotalTrees">0</td>
+          </tr>
+          <tr>
+            <th>Harvestable Trees</th>
+            <td id="printHarvestable">0</td>
+          </tr>
+          <tr>
+            <th>Rejected Trees</th>
+            <td id="printRejected">0</td>
+          </tr>
+          <tr>
+            <th>Total Volume (m³)</th>
+            <td id="printTotalVol">0.00</td>
+          </tr>
+        </table>
+        <br>
+        <h3>Tree Inventory Details</h3>
+      </div>
+
+      <h2>🌳 Recorded Trees</h2>
+      
+      <div id="locationHeader" class="hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem 2rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.5rem;">📍</span>
+          <div>
+            <span style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.25rem;">Exploitation Area</span>
+            <span id="areaName" style="color: white; font-size: 1.3rem; font-weight: 700;"></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="trees"></div>
+
+    <!-- Statistics Card -->
+    <div class="card">
+      <h2>📊 Statistics</h2>
+      <div class="summary-stats">
+        <div class="stat-card">
+          <div class="stat-value" id="totalTrees">0</div>
+          <div class="stat-label">Total Trees</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="harvestable">0</div>
+          <div class="stat-label">Harvestable</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="rejected">0</div>
+          <div class="stat-label">Rejected</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalVol">0.00</div>
+          <div class="stat-label">Volume (m³)</div>
+        </div>
+      </div>
+    </div>
+
+    <button id="exportBtn" class="btn btn-export" onclick="exportCSV()" style="margin-top: 1rem;" disabled>
+      📥 Export to CSV
+    </button>
+    <button class="btn btn-danger" onclick="showNewLocationModal()" style="margin-top: 1rem;">
+      🆕 New Inventory
+    </button>
+  </div>
+
+  <!-- Modal for New Location Warning -->
+  <div id="newLocationModal" class="modal">
+    <div class="modal-content">
+      <h3>New Inventory</h3>
+      <p>Starting a new inventory will clear all current data. Would you like to export the existing data before clearing?</p>
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="clearDataWithoutExport()">Don't Export</button>
+        <button class="btn btn-export" onclick="exportAndClear()">Export & Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Page Refresh Warning -->
+  <div id="refreshWarningModal" class="modal">
+    <div class="modal-content">
+      <h3>Unsaved Data</h3>
+      <p>You have unsaved data. Would you like to export it before leaving?</p>
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="cancelRefresh()">Cancel</button>
+        <button class="btn btn-danger" onclick="proceedWithoutExport()">Don't Export</button>
+        <button class="btn btn-export" onclick="exportAndLeave()">Export & Leave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Edit Record -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h3>✏️ Edit Tree Record</h3>
+      
+      <div class="form-grid">
+        <div class="input-group">
+          <label for="editArea" class="required">Exploitation Area</label>
+          <input type="text" id="editArea" placeholder="Enter exploitation area">
+        </div>
+        <div class="input-group">
+          <label for="editPlot" class="required">Plot Number</label>
+          <input type="text" id="editPlot" placeholder="Enter plot number">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="input-group">
+          <label for="editTradeName" class="required">Trade Name</label>
+          <select id="editTradeName" onchange="updateEditSpecies()">
+            <option value="">Select trade name...</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="editCode">Species Code</label>
+          <input type="text" id="editCode" readonly style="background: #f5f5f5;">
+        </div>
+        <div class="input-group">
+          <label for="editMinDiam">Min Diameter (cm)</label>
+          <input type="number" id="editMinDiam" readonly style="background: #f5f5f5;">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="input-group">
+          <label for="editDbh" class="required">DBH (cm)</label>
+          <input type="number" id="editDbh" step="0.1" placeholder="Enter DBH" oninput="recalculateVolume()">
+        </div>
+        <div class="input-group">
+          <label for="editHeight" class="required">Bole Height (m)</label>
+          <input type="number" id="editHeight" step="0.1" placeholder="Enter height" oninput="recalculateVolume()">
+        </div>
+        <div class="input-group">
+          <label for="editQuality" class="required">Quality</label>
+          <select id="editQuality">
+            <option value="">Select quality...</option>
+            <option value="1">1 - Perfect</option>
+            <option value="2">2 - Slight Defect</option>
+            <option value="3">3 - Unexploitable</option>
+            <option value="4">4 - Abandoned/Dead</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="input-group">
+          <label for="editEastingX" class="required">Easting (X)</label>
+          <input type="number" id="editEastingX" placeholder="e.g., 425150">
+        </div>
+        <div class="input-group">
+          <label for="editNorthingY" class="required">Northing (Y)</label>
+          <input type="number" id="editNorthingY" placeholder="e.g., 425150">
+        </div>
+        <div class="input-group">
+          <label for="editVolMethod">Volume Method</label>
+          <select id="editVolMethod" onchange="recalculateVolume()">
+            <option value="form">Form Factor</option>
+            <option value="conic">Conic Formula</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="editObs">Observations</label>
+        <textarea id="editObs" rows="2" placeholder="e.g., Semencier, Tige d'Avenir"></textarea>
+      </div>
+
+      <!-- Calculated Results Display -->
+      <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <div style="font-size: 0.85rem; color: #888; font-weight: 600; margin-bottom: 0.25rem;">CALCULATED VOLUME</div>
+            <div style="font-size: 1.25rem; color: #2c5364; font-weight: bold;">
+              <span id="editCalculatedVolume">0.00</span> m³
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 0.85rem; color: #888; font-weight: 600; margin-bottom: 0.25rem;">STATUS</div>
+            <div style="font-size: 1rem; color: #555; font-weight: 600;">
+              <span id="editTreeStatus">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEditedTree()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Guide Modal -->
+  <div id="userGuideModal" class="modal">
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <h3>📖 User Guide</h3>
+        <button class="close-btn" onclick="closeUserGuide()">✕</button>
+      </div>
+      <div class="guide-content">
+        <section class="guide-section">
+          <h4>🎯 Getting Started</h4>
+          <p>The Forest Inventory application helps you record, calculate, and manage tree data compatible with TIAMA/SIGIF2 and other forest management systems using two standard forestry volume calculation methods.</p>
+        </section>
+        <section class="guide-section">
+          <h4>📋 Step 1: Enter Tree Data</h4>
+          <p>Fill in all required fields marked with an asterisk (*):</p>
+          <ul>
+            <li><strong>Exploitation Area:</strong> Name of the forest exploitation area or research site</li>
+            <li><strong>Plot Number:</strong> The plot identifier where the tree is located</li>
+            <li><strong>Trade Name:</strong> Common trade name of the tree species</li>
+            <li><strong>DBH:</strong> Diameter at Breast Height in centimeters</li>
+            <li><strong>Bole Height:</strong> Commercial height of the tree bole in meters</li>
+            <li><strong>Quality:</strong> Tree quality classification (1=Perfect, 2=Slight Defect, 3=Unexploitable, 4=Abandoned/Dead)</li>
+            <li><strong>Easting/Northing:</strong> GPS coordinates of the tree</li>
+            <li><strong>Observations:</strong> Optional field for notes (e.g., seed tree, future crop tree)</li>
+          </ul>
+          <div class="tip-box">
+            <strong>💡 Tip:</strong> All required fields must be completed before you can calculate volume and save a tree record.
+          </div>
+        </section>
+        <section class="guide-section">
+          <h4>🔬 Step 2: Select Volume Calculation Method</h4>
+          <p>Choose one of two calculation methods:</p>
+          <div class="method-info">
+            <h5>📐 Form Factor Method</h5>
+            <p>To use this method:</p>
+            <ul>
+              <li>Measure the DBH and Bole Height</li>
+              <li>Enter DBH (in cm) and Bole Height (in m) in the form fields</li>
+              <li>Click the 🧮 Calculate Volume button to calculate tree volume in m³</li>
+              <li>Formula: <code>V = (π × D² × H × 0.5) / 4</code></li>
+              <li>Where: D = DBH (cm), H = Height (m)</li>
+              <li>This method uses a form factor of 0.5, suitable for general tropical hardwoods</li>
+            </ul>
+          </div>
+          <div class="method-info">
+            <h5>⭕ Conic Formula Method</h5>
+            <p>To use this method:</p>
+            <ul>
+              <li>Measure the DBH and Bole Height</li>
+              <li>Enter DBH (in cm) and Bole Height (in m) in the form fields</li>
+              <li>Click the 🧮 Calculate Volume button to calculate tree volume in m³</li>
+              <li>Formula: <code>V = (π × H × D²) / 12</code></li>
+              <li>Where: D = DBH (cm), H = Height (m)</li>
+              <li>This method assumes a conical tree shape</li>
+            </ul>
+            <div class="warning-box">
+              <strong>⚠️ Important:</strong> The system will warn you if DBH is below the minimum diameter for the selected species.
+            </div>
+          </div>
+        </section>
+        <section class="guide-section">
+          <h4>📊 Step 3: View Results</h4>
+          <p>After calculating and saving, your results appear in cards showing:</p>
+          <ul>
+            <li>All tree information entered</li>
+            <li>Calculated volume in m³</li>
+            <li><strong>Quality Classification:</strong>
+              <ul>
+                <li>Quality 1: Perfect tree</li>
+                <li>Quality 2: Slight defect</li>
+                <li>Quality 3: Unexploitable</li>
+                <li>Quality 4: Abandoned/Dead</li>
+              </ul>
+            </li>
+            <li><strong>Summary Statistics:</strong>
+              <ul>
+                <li>Total Trees: Number of trees recorded</li>
+                <li>Harvestable: Trees with quality 1 or 2</li>
+                <li>Rejected: Trees with quality 3 or 4</li>
+                <li>Total Volume: Sum of all harvestable tree volumes in m³</li>
+              </ul>
+            </li>
+          </ul>
+        </section>
+        <section class="guide-section">
+          <h4>✏️ Editing Records</h4>
+          <p>Click the <strong>✏️ Edit</strong> button on any result card to modify:</p>
+          <ul>
+            <li>Tree information fields</li>
+            <li>Calculation inputs (which will automatically recalculate the volume)</li>
+          </ul>
+          <p>The volume method can be changed and recalculated as needed.</p>
+        </section>
+
+        <section class="guide-section">
+        <h4>📥 Exporting Data</h4>
+          <p>To export your data to a CSV file:</p>
+          <ul>
+            <li>Click the menu button (⋮) in the top-right corner and choose 📥Export to CSV or</li>
+            <li>Click <strong>📥 Export to CSV</strong> to download all results in a spreadsheet format compatible with TIAMA/SIGIF2 and Excel.</li>
+            <li>The file wil be saved in your Downloads folder</li>
+          </ul>
+          <p>Exported files can be:</p>
+          <ul>
+            <li>Opened and edited in the Forest Inventory App./li>
+            <li>Opened and edited in Excel, Google Sheets, or any spreadsheet application</li>
+            <li>Saved as backup copies of your data</li>
+            <li>Shared with colleagues or supervisors</li>
+            <li>Re-imported back into the app for continued work</li>
+          </ul>
+        </section>
+        
+        <section class="guide-section">
+          <h4>📂 Importing CSV Files in menu</h4>
+          <p>You can import previously exported CSV files back into the app:</p>
+          <ul>
+            <ol>
+              <li>Click the menu button (⋮) in the top-right corner</li>
+              <li>Select <strong>📂 Open CSV File</strong></li>
+              <li>Choose your CSV file from your device</li>
+              <li>Review the import preview showing:
+                <ul>
+                  <li>File name</li>
+                  <li>Number of records found</li>
+                  <li>Exploitation area name (if present)</li>
+                </ul>
+              </li>
+              <li>Choose your import option:
+                <ul>
+                  <li><strong>Import:</strong> Adds new records to existing data</li>
+                  <li><strong>Replace Current Data:</strong> Clears existing records and imports the CSV data</li>
+                  <li><strong>Cancel:</strong> Cancels the import operation</li>
+                </ul>
+              </li>
+            </ol>
+          </ul>
+          <div class="tip-box">
+            <strong>💡 Tip:</strong> The imported exploitation area is editable. You can modify it before adding new records if needed.
+          </div>
+          <div class="warning-box">
+            <strong>⚠️ Important:</strong> Only import CSV files that were exported from this app or follow the exact same format. The app expects specific columns including Area, Plot, Trade Name, Species Code, DBH, Height, Volume, Quality, Coordinates, and Observations.
+          </div>
+        </section>
+        <section class="guide-section">
+          <h4>🆕 Starting a New Inventory</h4>
+          <p>To start a new inventory in a new area</p>
+          <ul>
+            <li>Click the menu button (⋮) in the top-right corner and choose 🆕 New Inventory or</li>
+            <li>Click <strong>🆕 New Inventory</strong> to start fresh. You'll be prompted to export existing data first if you haven't already.</li>
+          </ul>
+        </section>
+        <section class="guide-section">
+          <h4>🗑️ Deleting Records</h4>
+          <p>Click the <strong>🗑️ Delete</strong> button on any result card to remove it. Record IDs will automatically renumber to maintain sequence.</p>
+        </section>
+        <section class="guide-section">
+          <h4>💾 Data Safety</h4>
+          <ul>
+            <li>The app warns you before closing or refreshing if you have unsaved data</li>
+            <li>Always export your data before starting a new inventory</li>
+            <li>Data is stored only in your browser session and will be lost if not exported</li>
+          </ul>
+        </section>
+        <section class="guide-section">
+          <h4>🖨️ Printing Results</h4>
+          <p>Generate a professional printed report of your tree inventory:</p>
+          <ul>
+            <ol>
+              <li>Click the menu button (⋮) in the top-right corner</li>
+              <li>Select <strong>🖨️ Print Results</strong></li>
+              <li>Review the print preview showing:
+                <ul>
+                  <li>Exploitation area and date information</li>
+                  <li>Summary statistics (total trees, harvestable, rejected, total volume)</li>
+                  <li>Complete tree measurement details</li>
+                  <li>Developer and contact information</li>
+                </ul>
+              </li>
+              <li>Choose your print destination:
+                <ul>
+                  <li><strong>Physical Printer:</strong> Print to paper for field reports</li>
+                  <li><strong>Save as PDF:</strong> Create digital copies for archival or sharing</li>
+                </ul>
+              </li>
+            </ol>
+          </ul>
+          <div class="tip-box">
+            <strong>💡 Tip:</strong> The print layout is optimized for A4 paper and includes page breaks to keep records together. Unnecessary interface elements (buttons, menus) are automatically hidden when printing.
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- About Developer Modal -->
+  <div id="aboutDeveloperModal" class="modal">
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <h3>👨‍💻 About the Developer</h3>
+        <button class="close-btn" onclick="closeAboutDeveloper()">✕</button>
+      </div>
+      <div class="about-content">
+        <div class="developer-profile">
+          <img src="drnamuene.jpg" alt="Dr. Kato Samuel Namuene" class="developer-photo">
+          <h4>Dr. Kato Samuel Namuene</h4>
+          <p class="developer-subtitle">Forest Informatics & Forest Biometry</p>
+          <p class="developer-email">📧 <a href="mailto:kato.namuene@ubuea.cm">kato.namuene@ubuea.cm</a></p>
+          <p class="developer-email">
+            📧 <a href="https://www.linkedin.com/in/dr-kato-samuel-namuene-0b808a34" target="_blank" rel="noopener noreferrer">
+              LinkedIn
+            </a>
+          </p>
+        </div>
+
+        <div class="about-section">
+          <h5>🌟 Overview</h5>
+          <p>Dr. Kato Samuel Namuene is a Bakwerian from Bokwai Village, Buea, married with 3 kids. He is a lecturer and environmental educator with over 20 years of experience teaching and training in forestry, botany, information and communication technologies (ICTs), and environmental management. His career combines academic teaching, vocational skills development, and software innovation to support forest conservation, biodiversity conservation, and sustainable resource use.</p>
+        </div>
+
+        <div class="about-section">
+          <h5>🎓 Academic Qualifications</h5>
+          <ul>
+            <li><strong>Ph.D. in Botany (Forest Informatics)</strong> - University of Buea
+              <ul>
+                <li>ITTO-funded doctoral research on decision support systems and traceability software for timber exploitation monitoring</li>
+              </ul>
+            </li>
+            <li><strong>M.Sc. in Botany</strong></li>
+            <li><strong>B.Sc. (Hons.) in Plant Biology</strong></li>
+          </ul>
+        </div>
+
+        <div class="about-section">
+          <h5>📚 Professional Training</h5>
+          <ul>
+            <li><strong>Competence-Based Approach in Teaching</strong> - Ministry of Employment and Vocational Training (curriculum design, syllabus implementation, student evaluation)</li>
+            <li><strong>Rural Agriculture Training</strong> - Ministry of Agriculture and Rural Development and Ministry of Livestock, Fisheries and Animal Industries</li>
+            <li><strong>Education for Sustainable Development (ESD)</strong> - WWF Seminar</li>
+            <li><strong>International Computer Driving License (ICDL)</strong> - 2007</li>
+          </ul>
+        </div>
+
+        <div class="about-section">
+          <h5>💻 Advanced Professional Development</h5>
+          <ul>
+            <li><strong>Data Analysis with R Statistics</strong> - DataCamp (2017)</li>
+            <li><strong>Relational Databases and SQL</strong> - Stanford University Online (2022)</li>
+            <li><strong>Python Programming</strong> - Great Learning Academy (2023–2025)</li>
+            <li><strong>Oracle SQL</strong> - Great Learning Academy (2023–2025)</li>
+            <li><strong>Web App and Database Development</strong> - The Odin Project (2023–2025)</li>
+          </ul>
+        </div>
+
+        <div class="about-section">
+          <h5>🏢 Professional Experience</h5>
+          <ul>
+            <li><strong>Programme for the Sustainable Management of Natural Resources (PSMNR)</strong>
+              <ul>
+                <li>Over a decade of training staff and community members in GIS, database management, AutoCAD, file management, and ICT skills</li>
+              </ul>
+            </li>
+            <li><strong>WWF MOOC Developer</strong>
+              <ul>
+                <li>Developed and taught courses on innovations in technology for biodiversity conservation and ICT for green economy transformation</li>
+              </ul>
+            </li>
+            <li><strong>Intensive Vocational Training Centre (IVTC) Buea</strong>
+              <ul>
+                <li>12 years developing curricula in Microsoft Office, computer maintenance, and networking</li>
+                <li>Served as head of exams, jury member, and board member</li>
+              </ul>
+            </li>
+            <li><strong>Cameroon GCE Board</strong>
+              <ul>
+                <li>Resource person for syllabus development in advanced-level wood processing and forest management (since 2022)</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+
+        <div class="about-section">
+          <h5>🌍 Contributions to Conservation</h5>
+          <p>Dr. Namuene has made significant contributions to Education for Sustainable Development (ESD) through presentations on innovations in biodiversity conservation and ICT for a green economy. His work bridges the gap between technology and environmental conservation, creating practical tools and training programs that empower communities and organizations in sustainable resource management.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV Import Confirmation Modal -->
+  <div id="csvImportModal" class="modal">
+    <div class="modal-content">
+      <h3>Import CSV File</h3>
+      <p id="csvImportMessage"></p>
+      <div id="csvPreview" style="max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: none;">
+        <strong>Preview:</strong>
+        <div id="csvPreviewContent" style="margin-top: 0.5rem; font-size: 0.9rem;"></div>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="cancelCSVImport()">Cancel</button>
+        <button class="btn btn-danger" onclick="importCSVReplace()" id="replaceBtn" style="display: none;">Replace Current Data</button>
+        <button class="btn btn-primary" onclick="confirmCSVImport()">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/calculations.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof initializeSpeciesDropdown === 'function') {
+        initializeSpeciesDropdown();
+      } else {
+        console.error('initializeSpeciesDropdown function not found');
+      }
+    });
+  </script>
+  
+  <!-- PWA Installation Script -->
+  <script>
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(registration => {
+            console.log('Service Worker registered successfully:', registration.scope);
+          })
+          .catch(error => {
+            console.log('Service Worker registration failed:', error);
+          });
+      });
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt;
+    const installButton = document.createElement('button');
+    installButton.id = 'installButton';
+    installButton.className = 'install-button';
+    installButton.innerHTML = '📥 Install App';
+    installButton.style.display = 'none';
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installButton.style.display = 'flex';
+    });
+
+    installButton.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response: ${outcome}`);
+        deferredPrompt = null;
+        installButton.style.display = 'none';
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      console.log('App installed successfully');
+      installButton.style.display = 'none';
+    });
+
+    // Add install button to page
+    window.addEventListener('load', () => {
+      document.body.appendChild(installButton);
+    });
+  </script>
+</body>
+</html>
